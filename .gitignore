@@ -1,0 +1,5 @@
+/node_modules/
+/config.json
+/configOld.json
+/.dockerignore
+/.idea/

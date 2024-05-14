@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inverter Data</title>
+    <style>
+        .container {
+            display: flex;
+            justify-content: center; /* Centered for better visibility */
+        }
+
+        table {
+            width: 60%; /* Adjust width as needed */
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        #mynetwork {
+            width: 600px;
+            height: 600px;
+            border: 1px solid lightgray;
+        }
+
+    </style>
+</head>
+<body>
+<div class="container" id="dataContainer">
+    <table id="dataTable">
+        <thead>
+        <tr>
+            <th>Address</th>
+            <th>Name</th>
+            <th>Value</th>
+            <th>Unit</th>
+            <th>Data Type</th>
+            <th>plain data</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Rows will be added here dynamically -->
+        </tbody>
+    </table>
+</div>
+<p>Display nodes as images.</p>
+
+<script>
+
+    const wsProtocol = (window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
+
+    ws.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        updateOrCreateEntry(data);
+    };
+
+    function updateOrCreateEntry(data) {
+        const table = document.getElementById('dataTable').getElementsByTagName('tbody')[0];
+
+        data.forEach(row => {
+            const address = row.id +"-"+row.address;
+            const value = row.value;
+            let entry = document.getElementById(`row-${address}`);
+
+            if (!entry) {
+                entry = table.insertRow();
+                entry.id = `row-${address}`;
+                const cellAddress = entry.insertCell(0);
+                const cellName = entry.insertCell(1);
+                const cellValue = entry.insertCell(2);
+                const cellUom = entry.insertCell(3);
+                const cellDataType = entry.insertCell(4);
+                const cellDataPlain = entry.insertCell(5);
+                cellAddress.textContent = address;
+                cellValue.id = `value-${address}`;
+                cellValue.textContent = value;
+                cellName.textContent = row.name;
+                cellUom.textContent = row.uom;
+                cellDataType.textContent = row.dataType;
+                cellDataType.id = `dataType-${address}`;
+                cellDataPlain.textContent = row.planValue;
+                cellDataPlain.id = `plainValue-${address}`;
+
+            } else {
+                const valueCell = document.getElementById(`value-${address}`);
+                const cellDataPlain = document.getElementById(`plainValue-${address}`);
+                const cellDataType = document.getElementById(`dataType-${address}`);
+                valueCell.textContent = value;
+                cellDataPlain.textContent = row.planValue;
+                cellDataType.textContent = row.dataType;
+            }
+        });
+    }
+
+
+
+</script>
+</body>
+</html>
