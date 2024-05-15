@@ -16,28 +16,6 @@
         }
 
         /*count down status icon */
-        #countdown {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-        }
-
-        #countdown svg {
-            transform: rotate(-90deg);
-            width: 100%;
-            height: 100%;
-        }
-
-        #countdown .hand {
-            fill: green;
-            stroke: green;
-            stroke-width: 5;
-            stroke-dasharray: 125; /* 2 * PI * 20 (radius) */
-            stroke-dashoffset: 125;
-        }
-
         .status-dot-container {
             position: fixed;
             top: 20px;
@@ -108,8 +86,9 @@
                 label: "",
                 image: "solar2.png",
                 shape: "image",
+                size: 30,
                 x: 0,
-                y: 0,
+                y: 50,
                 physics: false  // Disable physics for this node
             });
             nodes.push({
@@ -117,8 +96,9 @@
                 label: "",
                 image: "solar2.png",
                 shape: "image",
+                size: 30,
                 x: 200,
-                y: 0,
+                y: 50,
                 physics: false  // Disable physics for this node
             });
             nodes.push({
@@ -126,6 +106,7 @@
                 label: "invert1",
                 image: "inverter.png",
                 shape: "image",
+                size: 20,
                 x: 0,
                 y: 200,
                 physics: false
@@ -135,6 +116,7 @@
                 label: "invert2",
                 image: "inverter.png",
                 shape: "image",
+                size: 20,
                 x: 200,
                 y: 200,
                 physics: false
@@ -162,6 +144,7 @@
                 label: "house",
                 image: "house_converted.png",
                 shape: "image",
+                size: 40,
                 x: 100,
                 y: 450,
                 physics: false
@@ -171,6 +154,7 @@
                 label: "wallbox",
                 image: "wallbox.png",
                 shape: "image",
+                size: 20,
                 x: -100,
                 y: 450,
                 physics: false
@@ -178,8 +162,9 @@
             nodes.push({
                 id: 421,
                 label: "Battery",
-                image: "battery5.png",
+                image: "battery5_white.png",
                 shape: "image",
+                size: 10,
                 x: -100,
                 y: 300,
                 physics: false
@@ -212,15 +197,15 @@
                 y: 550,
                 physics: false
             });
-            // nodes.push({
-            //     id: 503,
-            //     label: "Purchased Energy: ",
-            //     shape: "dot",
-            //     size: 0.1,
-            //     x: 100,
-            //     y: 550,
-            //     physics: false
-            // });
+            nodes.push({
+                id: 503,
+                label: "Purchased Energy: ",
+                shape: "dot",
+                size: 0.1,
+                x: 200,
+                y: 600,
+                physics: false
+            });
             nodes.push({
                 id: 504,
                 label: "Daily Load: ",
@@ -228,6 +213,24 @@
                 size: 0.1,
                 x: 200,
                 y: 550,
+                physics: false
+            });
+            nodes.push({
+                id: 505,
+                label: "Bat Charge: ",
+                shape: "dot",
+                size: 0.1,
+                x: -100,
+                y: 600,
+                physics: false
+            });
+            nodes.push({
+                id: 506,
+                label: "Bat Discharge: ",
+                shape: "dot",
+                size: 0.1,
+                x: 50,
+                y: 600,
                 physics: false
             });
             edges.push({from: 101, to: 201, id: 1});
@@ -285,20 +288,21 @@
             network.once('stabilized', function () {
                 network.moveTo({
                     scale: 1.8,
-                    position: {x: 100, y: 250}
+                    position: {x: 100, y: 350}
                 });
             });
             network.moveTo({
                 scale: 1.8,
-                position: {x: 100, y: 250}
+                position: {x: 100, y: 350}
             });
         }
 
         function update(data) {
-            let value1, value2, batteryLevel, batteryTemp;
-            let activePower1 = 0, activePower2 = 0,
-                dailyYield = 0, gridInfeed = 0, dailyLoad = 0, dailyImport = 0,
-                dailyYieldUom;
+            let loadVal1, loadVal2, loadUom, batteryLevel, batteryTemp;
+            let activePower1 = 0, activePower2 = 0, activePowerUom,
+                dailyYield = 0, gridInfeed = 0, dailyLoad = 0, dailyImport = 0, dailyImportUom,
+                dailyYieldUom,
+                dailyBatteryCharge = 0, dailyBatteryDischarge = 0, dailyBatteryUom;
 
             lastMessageTime = Date.now();
 
@@ -349,10 +353,12 @@
                     }
                 }
                 if (row.id === 1 && row.address === 13007) {
-                    value1 = parseFloat(row.value);
+                    loadVal1 = parseFloat(row.value);
+                    loadUom = row.uom;
                 }
                 if (row.id === 2 && row.address === 5008) {
-                    value2 = parseFloat(row.value);
+                    loadVal2 = parseFloat(row.value);
+                    loadUom = row.uom;
                 }
 
                 if (row.id === 1 && row.address === 13022) {
@@ -363,9 +369,11 @@
                 }
                 if (row.id === 1 && row.address === 13033) {
                     activePower1 = parseFloat(row.value);
+                    activePowerUom = row.uom;
                 }
                 if (row.id === 2 && row.address === 5008) {
                     activePower2 = parseFloat(row.value);
+                    activePowerUom = row.uom;
                 }
 
                 if ((row.id === 1 && row.address === 13001) || (row.id === 2 && row.address === 5002)) {
@@ -380,29 +388,48 @@
                         gridInfeedNode.label = `Export to Grid:\n${gridInfeed.toFixed(1)} ${row.uom}`;
                     }
                 }
-
                 if (row.id === 1 && row.address === 13035) {
                     dailyImport = parseFloat(row.value);
+                    dailyImportUom = row.uom;
+                }
+                if (row.id === 1 && row.address === 13039) {
+                    dailyBatteryCharge = parseFloat(row.value);
+                    dailyBatteryUom = row.uom;
+                }
+                if (row.id === 1 && row.address === 13025) {
+                    dailyBatteryDischarge = parseFloat(row.value);
+                    dailyBatteryUom = row.uom;
                 }
 
             });
 
             const edgeToUpdate = edges.find(edge => edge.id === 6);
             if (edgeToUpdate) {
-                const load = value1 + value2;
-                edgeToUpdate.label = `${load.toFixed(3)}`;
+                const load = loadVal1 + loadVal2;
+                edgeToUpdate.label = `${load.toFixed(3)} ${loadUom}`;
             }
 
             const nodeToUpdate = nodes.find(node => node.id === 421);
             if (nodeToUpdate) {
                 nodeToUpdate.label = `${batteryLevel} \n${batteryTemp}`;
+                if (batteryLevel > 80 && batteryLevel <= 100) {
+                    nodeToUpdate.image = "battery5_white.png";
+                } else if (batteryLevel > 60 && batteryLevel <= 80) {
+                    nodeToUpdate.image = "battery4_white.png";
+                } else if (batteryLevel > 40 && batteryLevel <= 60) {
+                    nodeToUpdate.image = "battery3_white.png";
+                } else if (batteryLevel > 20 && batteryLevel <= 40) {
+                    nodeToUpdate.image = "battery2_white.png";
+                } else if (batteryLevel > 0 && batteryLevel <= 20){
+                    nodeToUpdate.image = "battery1_white.png";
+                }
             }
 
             const edgeToUpdateActivePower = edges.find(edge => edge.id === 51);
             if (edgeToUpdateActivePower) {
                 let totalActive = activePower1 + activePower2;
                 totalActive = totalActive.toFixed(3);
-                edgeToUpdateActivePower.label = `${totalActive}`;
+                edgeToUpdateActivePower.label = `${totalActive} ${activePowerUom}`;
             }
 
             const dailyYieldNode = nodes.find(node => node.id === 501);
@@ -412,18 +439,32 @@
 
             const dailyLoadNode = nodes.find(node => node.id === 504);
             if (dailyLoadNode) {
-                dailyLoad = dailyYield - gridInfeed + dailyImport;
+                dailyLoad = dailyYield - gridInfeed - dailyBatteryCharge - dailyImport + dailyBatteryDischarge;
                 dailyLoadNode.label = `Daily Load:\n${dailyLoad.toFixed(1)} ${dailyYieldUom}`;
             }
 
-
+            const dailyBatChargeNode = nodes.find(node => node.id === 505);
+            if (dailyBatChargeNode) {
+                dailyBatChargeNode.label = `Bat Charge:\n${dailyBatteryCharge.toFixed(1)} ${dailyBatteryUom}`;
+            }
+            const dailyBatDischargeNode = nodes.find(node => node.id === 506);
+            if (dailyBatDischargeNode) {
+                dailyBatDischargeNode.label = `Bat Discharge:\n${dailyBatteryDischarge.toFixed(1)} ${dailyBatteryUom}`;
+            }
+            const dailyImportNode = nodes.find(node => node.id === 503);
+            if (dailyImportNode) {
+                dailyImportNode.label = `Import from Grid:\n${dailyImport.toFixed(1)} ${dailyImportUom}`;
+            }
+            const activePowerEdge1 = edges.find(edge => edge.id === 3);
+            if (activePowerEdge1) {
+                activePowerEdge1.label = `${activePower1.toFixed(3)} ${activePowerUom}`;
+            }
+            const activePowerEdge2 = edges.find(edge => edge.id === 5);
+            if (activePowerEdge1) {
+                activePowerEdge2.label = `${activePower2.toFixed(3)} ${activePowerUom}`;
+            }
             // Refresh the network
             network.setData({nodes: nodes, edges: edges});
-            network.once('stabilized', function () {
-                network.moveTo({
-                    scale: 1.5
-                });
-            });
         }
 
         window.addEventListener("load", () => {
